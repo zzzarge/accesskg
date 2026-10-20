@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>AccessKG — маршруты без барьеров</title>
+  <meta name="description" content="Карта и маршруты по Бишкеку для людей на колясках, родителей с колясками и пожилых людей.">
+  <meta name="theme-color" content="#102A2C">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <header class="bar">
+    <a class="logo" href="/" aria-label="AccessKG, на главную">Access<span>KG</span></a>
+    <span class="demo" id="demoBadge" hidden>Демо-режим</span>
+    <span class="team" id="teamBadge" hidden>Команда</span>
+  </header>
+
+  <div class="layout">
+    <aside class="sheet" id="sheet" aria-label="Панель">
+      <nav class="tabs" role="tablist">
+        <button role="tab" id="tab-route" aria-controls="view-route" aria-selected="true">Маршрут</button>
+        <button role="tab" id="tab-add" aria-controls="view-add" aria-selected="false">Добавить</button>
+        <button role="tab" id="tab-city" aria-controls="view-city" aria-selected="false">Для мэрии</button>
+      </nav>
+
+      <!-- Маршрут -->
+      <section class="view" id="view-route" role="tabpanel" aria-labelledby="tab-route">
+        <div class="ends">
+          <div class="end">
+            <span class="dot a">A</span>
+            <div class="end-main"><span class="lbl">Откуда</span><span class="end-val" id="fromVal">Не выбрано</span></div>
+            <div class="end-btns">
+              <button class="mini" data-pick="from">На карте</button>
+              <button class="mini" data-geo="from">Я здесь</button>
+            </div>
+          </div>
+          <div class="end">
+            <span class="dot b">B</span>
+            <div class="end-main"><span class="lbl">Куда</span><span class="end-val" id="toVal">Не выбрано</span></div>
+            <div class="end-btns">
+              <button class="mini" data-pick="to">На карте</button>
+            </div>
+          </div>
+          <label class="field"><span class="lbl">Или выберите место</span>
+            <select id="placeTo"><option value="">Важное место как пункт B…</option></select>
+          </label>
+        </div>
+        <div class="field"><span class="lbl">Профиль</span><div class="chips" id="profiles"></div></div>
+        <label class="check"><input type="checkbox" id="fresh"> Предупреждать о данных старше 30 дней</label>
+        <div id="routeOut" aria-live="polite"></div>
+      </section>
+
+      <!-- Добавить -->
+      <section class="view" id="view-add" role="tabpanel" aria-labelledby="tab-add" hidden>
+        <form id="addForm" class="form" novalidate>
+          <h2>Новая точка</h2>
+          <div class="where">
+            <span class="lbl">Где</span>
+            <span id="addWhere" class="end-val">Нажмите на карту или «Я здесь»</span>
+            <div class="end-btns"><button type="button" class="mini" data-pick="add">На карте</button><button type="button" class="mini" data-geo="add">Я здесь</button></div>
+          </div>
+          <label class="field"><span class="lbl">Что это</span><select id="kind" required></select></label>
+          <label class="field" id="tempWrap" hidden><span class="lbl">Временное: что именно</span><select id="tempType"></select></label>
+          <label class="field"><span class="lbl">Название</span><input id="title" maxlength="120" required placeholder="Например: бордюр у перехода"></label>
+          <div class="nums">
+            <label class="field" data-f="curb_cm"><span class="lbl">Бордюр, см</span><input id="curb_cm" type="number" inputmode="decimal" min="0" max="60" step="0.5"></label>
+            <label class="field" data-f="slope_pct"><span class="lbl">Уклон, %</span><input id="slope_pct" type="number" inputmode="decimal" min="0" max="40" step="0.5"></label>
+            <label class="field" data-f="width_cm"><span class="lbl">Ширина, см</span><input id="width_cm" type="number" inputmode="decimal" min="20" max="400" step="5"></label>
+          </div>
+          <label class="field"><span class="lbl">Фото</span><input id="photo" type="file" accept="image/*" capture="environment"></label>
+          <p class="hint">С фото точке больше доверия. Уклон можно измерить приложением-уровнем на телефоне.</p>
+          <p class="err" id="addErr" role="alert" hidden></p>
+          <button class="btn" type="submit" id="addSubmit">Сохранить точку</button>
+        </form>
+
+        <form id="placeForm" class="form" novalidate hidden>
+          <h2>Важное место</h2>
+          <p class="hint">Школы, поликлиники, аптеки, остановки. По ним считается рейтинг для мэрии. Место ставится в точку, выбранную выше.</p>
+          <label class="field"><span class="lbl">Название</span><input id="placeName" maxlength="120" required></label>
+          <label class="field"><span class="lbl">Категория</span><select id="placeCat"></select></label>
+          <label class="field"><span class="lbl">Паспорт входа, по строке: «Что: как»</span>
+            <textarea id="placePass" rows="4" placeholder="Ступени у входа: 3&#10;Пандус: есть, 9%&#10;Кнопка вызова: нет"></textarea></label>
+          <p class="err" id="placeErr" role="alert" hidden></p>
+          <button class="btn" type="submit">Сохранить место</button>
+        </form>
+
+        <details class="teambox">
+          <summary>Я из команды</summary>
+          <p class="hint">С командным кодом ваши точки помечаются «Проверено командой на месте», и можно добавлять важные места.</p>
+          <div class="row">
+            <input id="teamCode" type="password" autocomplete="off" placeholder="Командный код" aria-label="Командный код">
+            <button class="btn ghost" type="button" id="teamBtn">Войти</button>
+          </div>
+          <p class="err" id="teamErr" role="alert" hidden></p>
+        </details>
+      </section>
+
+      <!-- Для мэрии -->
+      <section class="view" id="view-city" role="tabpanel" aria-labelledby="tab-city" hidden>
+        <h2>Где ремонт даст больше всего пользы</h2>
+        <p class="hint" id="cityNote"></p>
+        <ol class="rank" id="rank"></ol>
+        <button class="btn ghost" id="csvBtn" type="button">Скачать CSV для мэрии</button>
+      </section>
+
+      <!-- Карточка точки или места -->
+      <section class="view" id="view-card" hidden aria-live="polite"></section>
+    </aside>
+
+    <main class="mapbox">
+      <div id="map" role="application" aria-label="Карта Бишкека"></div>
+      <div class="pickhint" id="pickHint" hidden></div>
+      <div class="legend" aria-hidden="true">
+        <span><i class="lg foot"></i>Кратчайший</span>
+        <span><i class="lg wheel"></i>Доступный</span>
+        <span><i class="lg-dot bad"></i>Барьер</span>
+        <span><i class="lg-dot good"></i>Удобство</span>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
